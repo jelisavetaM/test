@@ -11,13 +11,6 @@ import re
 import urllib.request, json
 from functools import reduce
 
-#####################################################
-##### TEMPORARY #####
-projectNumber = 2022103
-##### TEMPORARY END #####
-
-#stimuliLogics = [1] #if there are multiple stimuli logics, just add to a list, for istance [6,5,2]
-#####################################################
 
 dataset = st.container()
 	
@@ -32,6 +25,7 @@ with dataset:
 
 
     #pokupi klikove iz SPSS baze
+        projectNumber = 2022103
         os.chdir('C:\\Users\\jelisaveta.m\\Desktop\\Decipher dashboards')
         originalSurvey, meta = pyreadstat.read_sav(os.getcwd() + '\\Raw data\\ETL\\Survey\\220613.sav', user_missing=False)
         
