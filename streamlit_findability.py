@@ -11,7 +11,7 @@ dataset = st.container()
 with dataset:
     originalSurvey = st.file_uploader('Upload Databases from Virtual Shelf Platform:', type=['sav'], accept_multiple_files=False, key=None, help=None, on_change=None, args=None, kwargs=None,disabled=False)
     
-    if len(originalSurvey)==0 or valid_id_import is None:
+    if originalSurvey is not None:
         st.error("Please upload the files!")
     else:
         originalSurvey, meta = pyreadstat.read_sav(originalSurvey, user_missing=False)
