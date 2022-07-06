@@ -21,7 +21,7 @@ dataset = st.container()
 	
 with dataset:
     originalSurvey = st.file_uploader('Upload survey database:', type=['sav'], accept_multiple_files=False, key=None, help=None, on_change=None, args=None, kwargs=None,disabled=False)
-    rtm_upload = st.file_uploader('Upload RTM database:', type=None, accept_multiple_files=False, key=None, help=None, on_change=None, args=None, kwargs=None,disabled=False)
+    rtm_upload = st.file_uploader('Upload RTM database:', type=['xlsx'], accept_multiple_files=False, key=None, help=None, on_change=None, args=None, kwargs=None,disabled=False)
     
     if originalSurvey is None or rtm_upload is None:
         st.error("Please upload the files!")
