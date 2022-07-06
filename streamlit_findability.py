@@ -15,7 +15,6 @@ import urllib.request, json
 import streamlit as st
 import shutil
 
-os.chdir('C:\\Users\\jelisaveta.m\\Desktop\\Decipher dashboards')
 
 
 dataset = st.container()
