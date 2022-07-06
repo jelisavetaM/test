@@ -26,5 +26,5 @@ with dataset:
         with open("stlfile.sav", "wb") as buffer:
             shutil.copyfileobj(file, buffer)
             
-        originalSurvey, meta = pyreadstat.read_sav("stlfile.sav", user_missing=False)
-        st.write(originalSurvey)
+        #originalSurvey, meta = pyreadstat.read_sav("stlfile.sav", user_missing=False)
+       # st.write(originalSurvey)
