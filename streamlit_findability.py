@@ -213,5 +213,5 @@ with dataset:
                 finalRes = finalRes.merge(finalDataLongVarFinal,on='uuid')
 	
 	
-        finalClickDatabase = clickData.merge(finalRes,on='uuid')
-        finalDataLongVarFinal.to_csv('C:/Users/jelisaveta.m/Desktop/' + str(projectNumber) + 'proba_jellu_final.csv')
+            finalClickDatabase = clickData.merge(finalRes,on='uuid')
+            finalDataLongVarFinal.to_csv('C:/Users/jelisaveta.m/Desktop/' + str(projectNumber) + 'proba_jellu_final.csv')
