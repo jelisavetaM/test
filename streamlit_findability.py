@@ -22,12 +22,4 @@ with dataset:
     else:
         with open('temp.sav', "wb") as buffer:
             shutil.copyfileobj(originalSurvey, buffer)
-
-
-    #pokupi klikove iz SPSS baze
-        projectNumber = 2022103
-        os.chdir('C:\\Users\\jelisaveta.m\\Desktop\\Decipher dashboards')
-        originalSurvey, meta = pyreadstat.read_sav(buffer, user_missing=False)
-        
-        clickVariables = [col for col in originalSurvey.columns if re.search('AllDataBackupNoRemoved', col) ]
         
