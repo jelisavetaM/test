@@ -204,9 +204,11 @@ with dataset:
             
             
             if finalRes.empty:
-                finalRes = originalSurvey.merge(finalDataLongVarFinal,on='uuid')
+		st.write(finalRes)
+                #finalRes = originalSurvey.merge(finalDataLongVarFinal,on='uuid')
             else:
-                finalRes = finalRes.merge(finalDataLongVarFinal,on='uuid')
+		st.write(finalRes)
+                #finalRes = finalRes.merge(finalDataLongVarFinal,on='uuid')
 	
 	
     finalClickDatabase = clickData.merge(finalRes,on='uuid')
