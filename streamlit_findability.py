@@ -27,7 +27,7 @@ with dataset:
     #pokupi klikove iz SPSS baze
         projectNumber = 2022103
         os.chdir('C:\\Users\\jelisaveta.m\\Desktop\\Decipher dashboards')
-        originalSurvey, meta = pyreadstat.read_sav(os.getcwd() + '\\Raw data\\ETL\\Survey\\220613.sav', user_missing=False)
+        originalSurvey, meta = pyreadstat.read_sav(buffer, user_missing=False)
         
         clickVariables = [col for col in originalSurvey.columns if re.search('AllDataBackupNoRemoved', col) ]
         
