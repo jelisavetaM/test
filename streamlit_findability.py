@@ -23,8 +23,8 @@ with dataset:
     if originalSurvey is None:
         st.error("Please upload the files!")
     else:
-        with open('220613.sav', "wb") as buffer:
+        with open('temp.sav', "wb") as buffer:
             shutil.copyfileobj(originalSurvey, buffer)
             
-        #originalSurvey, meta = pyreadstat.read_sav("stlfile.sav", user_missing=False)
-       # st.write(originalSurvey)
+        originalSurvey, meta = pyreadstat.read_sav("temp.sav", user_missing=False)
+        st.write(originalSurvey)
