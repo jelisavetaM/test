@@ -1,17 +1,19 @@
 # -*- coding: utf-8 -*-
 """
-Created on Tue Jul  5 15:54:49 2022
+Created on Wed Jun 29 14:51:18 2022
 
 @author: jelisaveta.m
 """
+
 import pandas as pd
-import pyreadstat
 import os
+import pyreadstat
 import re
-import urllib.request, json
+import numpy as np
 from functools import reduce
-import streamlit as st
-import shutil
+import urllib.request, json
+
+os.chdir('C:\\Users\\jelisaveta.m\\Desktop\\Decipher dashboards')
 
 
 dataset = st.container()
@@ -31,7 +33,7 @@ with dataset:
         version = "dapresy"
         
         # Rename record and date variables; add Weight variable
-        originalSurvey, meta = pyreadstat.read_sav(buffer, user_missing=False)
+        originalSurvey, meta = pyreadstat.read_sav('temp.sav', user_missing=False)
         # for the date variable not no stay transformed to integer
         # it is necessary  to rescale the integer from SPSS with the number 12219379200 i.e. the number of seconds existing between "1582-10-14" and "1970-01-01" (the origin used by to_datetime)
         originalSurvey['date'] = pd.to_datetime(originalSurvey['date']-12219379200, unit="s")
@@ -424,4 +426,4 @@ with dataset:
         
         
         
-        #pyreadstat.write_sav(finalAllMerged, os.getcwd() + '\\Outputs\\ETL\\Survey\\test_dapresy_final.sav',  variable_value_labels = new_dict, column_labels = new_labels, variable_measure = meta.variable_measure)
+        pyreadstat.write_sav(finalAllMerged, os.getcwd() + '\\Outputs\\ETL\\Survey\\test_dapresy_final.sav',  variable_value_labels = new_dict, column_labels = new_labels, variable_measure = meta.variable_measure)
