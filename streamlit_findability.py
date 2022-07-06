@@ -22,6 +22,8 @@ with dataset:
     if originalSurvey is None:
         st.error("Please upload the files!")
     else:
-        bytes_data = originalSurvey.getvalue()
-        originalSurvey, meta = pyreadstat.read_sav(bytes_data, user_missing=False)
+        with open("stlfile.sav", "wb") as buffer:
+            shutil.copyfileobj(file, buffer)
+            
+        originalSurvey, meta = pyreadstat.read_sav("stlfile.sav", user_missing=False)
         st.write(originalSurvey)
