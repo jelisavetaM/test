@@ -427,9 +427,19 @@ with dataset:
         meta.variable_measure.update(click_measure)
        
         
-        def get_table_download_link(df):
-            csv = df.to_csv(index=False)
-            b64 = base64.b64encode(csv.encode()).decode()  # some strings <-> bytes conversions necessary here
-            href = f'<a href="data:file/csv;base64,{b64}">Download csv file</a>'
-        st.markdown(get_table_download_link(finalAllMerged), unsafe_allow_html=True)
+        zipName = 'Export_' + st.session_state.text_key + '.zip'
+        zipObj = ZipFile(zipName, "w")
+        zipObj.write("final_by_measure.xlsx")
+        zipObj.close()
+        ZipfileDotZip = zipName
+                
+                
+        with open(ZipfileDotZip, "rb") as f:
+            bytes = f.read()
+            b64 = base64.b64encode(bytes).decode()
+            href = f"<a class='download' href=\"data:file/zip;base64,{b64}\" download='{ZipfileDotZip}.zip'>\
+                        <b>Download data for project " + st.session_state.text_key + "</b>\
+                    </a>"
+            st.sidebar.markdown(href, unsafe_allow_html=True)
+
         #pyreadstat.write_sav(finalAllMerged, 'C:\\Users\\jelisaveta.m\\Desktop\\Decipher dashboards\\Outputs\\ETL\\Survey\\test_dapresy_final_1.sav',  variable_value_labels = new_dict, column_labels = new_labels, variable_measure = meta.variable_measure)
