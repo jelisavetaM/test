@@ -425,9 +425,10 @@ with dataset:
         new_labels = new_labels + click_labels
         meta.variable_measure.update(click_measure)
         
-	def get_table_download_link(df):
+        def get_table_download_link(df):
             csv = df.to_csv(index=False)
             b64 = base64.b64encode(csv.encode()).decode()  # some strings <-> bytes conversions necessary here
             href = f'<a href="data:file/csv;base64,{b64}">Download csv file</a>'
+        
         get_table_download_link(get_table_download_link)
-        pyreadstat.write_sav(finalAllMerged, os.getcwd() + '\\Outputs\\ETL\\Survey\\test_dapresy_final.sav',  variable_value_labels = new_dict, column_labels = new_labels, variable_measure = meta.variable_measure)
+        #pyreadstat.write_sav(finalAllMerged, os.getcwd() + '\\Outputs\\ETL\\Survey\\test_dapresy_final.sav',  variable_value_labels = new_dict, column_labels = new_labels, variable_measure = meta.variable_measure)
