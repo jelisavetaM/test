@@ -18,7 +18,7 @@ import xlsxwriter
 import base64
 
 
-
+st.markdown(get_table_download_link(df), unsafe_allow_html=True)
 dataset = st.container()
 	
 with dataset:
