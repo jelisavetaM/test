@@ -422,8 +422,12 @@ with dataset:
                     click_measure[var] = "scale"
                 
         new_labels = new_labels + click_labels
-        meta.variable_measure.update(click_measure)
+            meta.variable_measure.update(click_measure)
         
-        
+        with pd.ExcelWriter("final.xlsx") as writer:
+            finalAllMerged.to_excel(writer, sheet_name='sheet1', index=False)
+    
+        with open('final.xlsx', mode = "rb") as f:
+        st.download_button('Findability Data', f, file_name='final.xlsx')
         
         #pyreadstat.write_sav(finalAllMerged, os.getcwd() + '\\Outputs\\ETL\\Survey\\test_dapresy_final.sav',  variable_value_labels = new_dict, column_labels = new_labels, variable_measure = meta.variable_measure)
