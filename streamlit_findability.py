@@ -28,8 +28,6 @@ with dataset:
     else:
         with open('temp.sav', "wb") as buffer:
             shutil.copyfileobj(originalSurvey, buffer)
-        df_RTM_original = pd.read_csv(rtm_upload)
-        st.stop()
         projectNumber = 2022103
         
         version = "dapresy"
@@ -165,7 +163,7 @@ with dataset:
         ############################################### RTM PART ###############################################
         RTM_Qtext = "Does the attribute match the display you can see below?"
         
-        df_RTM_original = pd.read_excel(rtm_upload)
+        df_RTM_original = pd.read_csv(rtm_upload)
         df_RTM = df_RTM_original.loc[:, df_RTM_original.columns.str.startswith('EXP') | df_RTM_original.columns.str.startswith('HIYES') | df_RTM_original.columns.str.startswith('userid')]
         
         #delete dupicates in the RTM (bug)
