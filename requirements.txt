@@ -1,1 +1,2 @@
 pyreadstat
+xlsxwriter
