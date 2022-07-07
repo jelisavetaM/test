@@ -425,5 +425,10 @@ with dataset:
                 
         new_labels = new_labels + click_labels
         meta.variable_measure.update(click_measure)
-        st.write(finalAllMerged)
+        
+	with open("progress.sav", "w") as f:
+            pyreadstat.write_sav(finalAllMerged, f,  variable_value_labels = new_dict, column_labels = new_labels, variable_measure = meta.variable_measure)
+            st.download_button('Findability Data', f, file_name='progress.sav')
+        
+	
         pyreadstat.write_sav(finalAllMerged, 'C:\\Users\\jelisaveta.m\\Desktop\\Decipher dashboards\\Outputs\\ETL\\Survey\\test_dapresy_final_1.sav',  variable_value_labels = new_dict, column_labels = new_labels, variable_measure = meta.variable_measure)
