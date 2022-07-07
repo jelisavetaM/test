@@ -1,218 +1,200 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Tue Jul  5 15:54:49 2022
-
-@author: jelisaveta.m
-"""
+import streamlit as st
 import pandas as pd
-import pyreadstat
-import os
-import re
-import urllib.request, json
-from functools import reduce
-
-#####################################################
-##### TEMPORARY #####
-projectNumber = 2022103
-##### TEMPORARY END #####
-
-#stimuliLogics = [1] #if there are multiple stimuli logics, just add to a list, for istance [6,5,2]
-#####################################################
+import numpy as np
+import time
 
 dataset = st.container()
-	
-with dataset:
-    originalSurvey = st.file_uploader('Upload Databases from Virtual Shelf Platform:', type=['sav'], accept_multiple_files=False, key=None, help=None, on_change=None, args=None, kwargs=None,disabled=False)
+
+def get_findability_data(allFilenames, valid_id_import, tested_product):
+    find_raw = pd.concat([pd.read_csv(f, sep=',', keep_default_na=False) for f in allFilenames])
+    find_raw = find_raw[find_raw['USER ID'] != '']
+
+    valid_id = pd.read_excel(valid_id_import)
+
+
+    find_merge = pd.merge(find_raw, valid_id, how='right', left_on='USER ID', right_on='sguid')
+
+    #sredjivanje qty kolone u no purchase, purchase#
+    dozvoljene_vrednosti_1 = ['1']
+    find_merge.loc[~find_merge['QUANTITY'].isin(dozvoljene_vrednosti_1), 'QUANTITY'] = 'No purchase'
+    find_merge['QUANTITY'] = np.where(find_merge['QUANTITY'] == '1', 'Purchase', find_merge['QUANTITY'])
+
+    #sredjivanje client kolone u no purchase, purchase#
+    find_merge['CLIENT'] = np.where( 
+        ( (find_merge['SKU'] == tested_product) & (find_merge['QUANTITY'] == 'Purchase' ) ),'Test product1', 'none')
+
+    #sredjivanje splitova#
+    find_merge['cell_split'] = 'cell_' + find_merge['cell'].astype(str) 
+
+    #######CISCENJE######
+    #ciscenje empty#
+    nedozvoljene_vrednosti = ['Empty', 'No Buy']
+    find_merge.loc[find_merge['TIME BEFORE FIRST BUY'].isin(nedozvoljene_vrednosti), 'TIME BEFORE FIRST BUY'] = ''
+
+    #za uzimanje dela DF-a#
+    find_TIME_cleaning_temp = find_merge[['USER ID', 'Vrid', 'SKU', 'CLIENT', 'QUANTITY', 'TIME BEFORE FIRST BUY', 'cell_split', 'users']]
+
+    find_TIME_purchase = find_TIME_cleaning_temp.query("QUANTITY == 'Purchase'")
+
+
+    find_TIME_purchase_client = find_TIME_cleaning_temp.query("QUANTITY == 'Purchase'& CLIENT == 'Test product1'")
+
+    find_TIME_purchase_client = find_TIME_purchase_client.astype({'TIME BEFORE FIRST BUY': 'int32'})
+
+    cells = find_TIME_purchase_client['cell_split'].unique().tolist()
+
+
+    #ciscenje cellova od outliera, gore/dole i mean + 2.5 stdev, TOTAL VREME#
+
+    find_cells =[]
+
+    for cells, find_TIME_temp in find_TIME_purchase_client.groupby('cell_split'):
+        sorted_data = find_TIME_temp.sort_values('TIME BEFORE FIRST BUY')
+        n = len(find_TIME_temp)
+        outliers = round(n*4/100)
+        find_TIME_temp = sorted_data[outliers: n-outliers]
+        
+        mean = np.mean(find_TIME_temp['TIME BEFORE FIRST BUY'])
+        stdev = np.std(find_TIME_temp['TIME BEFORE FIRST BUY'])
+        st.write("Mean: {:.2f}".format(mean))
+        st.write("Standard Deviation: {:.2f}".format(stdev))
+
+        lower_range = mean-(2.5*stdev)
+        upper_range = mean+(2.5*stdev)
+        st.write("Good data should lie between {:.2f} and {:.2f}".format(lower_range, upper_range))
+
+        outliers = [i for i in find_TIME_temp['TIME BEFORE FIRST BUY'] if i<lower_range or i>upper_range]
+        st.write("Number of outliers:",len(outliers))
+        st.write("Outliers:", outliers)
+
+        find_TIME_temp.drop(find_TIME_temp[(find_TIME_temp['TIME BEFORE FIRST BUY']<lower_range) | (find_TIME_temp['TIME BEFORE FIRST BUY']>upper_range)].index, inplace=True)  
+        
+        find_TIME_temp = find_TIME_temp.rename(columns={'TIME BEFORE FIRST BUY': 'time_total_cell'})
+        find_TIME_temp = find_TIME_temp.astype({'time_total_cell': 'int32'})
+        
+        find_cells.append(find_TIME_temp)
+        
+    find_cells_clean = pd.concat(find_cells)
+
+    list_find_cells_25 =[]
+
+    for cells, find_cells_25_temp in find_cells_clean.groupby('cell_split'):
+        list_values = find_cells_25_temp['time_total_cell'].to_list()
+        n_ispitanika = len(list_values)
+        najbrzih_25_temp = n_ispitanika/100*25
+        najbrzih_25 = int(najbrzih_25_temp)
+
+        find_cells_25_temp = find_cells_25_temp.nsmallest(najbrzih_25, ['time_total_cell'])
+
+        find_cells_25_temp = find_cells_25_temp.rename(columns={'time_total_cell': 'time_total_cell_25'})
+        find_cells_25_temp = find_cells_25_temp.astype({'time_total_cell_25': 'int32'})
+        
+        list_find_cells_25.append(find_cells_25_temp)
+        
+    find_cells_25 = pd.concat(list_find_cells_25)
+
+    list_find_cells_50 =[]
+
+    for cells, find_cells_50_temp in find_cells_clean.groupby('cell_split'):
+
+
+        list_values = find_cells_50_temp['time_total_cell'].to_list()
+        n_ispitanika = len(list_values)
+        najbrzih_50_temp = n_ispitanika/100*50
+        najbrzih_50 = int(najbrzih_50_temp)
+
+        find_cells_50_temp = find_cells_50_temp.nsmallest(najbrzih_50, ['time_total_cell'])
+
+        find_cells_50_temp = find_cells_50_temp.rename(columns={'time_total_cell': 'time_total_cell_50'})
+        find_cells_50_temp = find_cells_50_temp.astype({'time_total_cell_50': 'int32'})
+        
+        list_find_cells_50.append(find_cells_50_temp)
+        
+    find_cells_50 = pd.concat(list_find_cells_50)
+
+    cells = find_TIME_purchase_client['cell_split'].unique().tolist()
+    users = find_TIME_purchase_client['users'].unique().tolist()
+
+    list_find_cells_users_25 =[]
+    list_find_cells_users_50 =[]
+    for cell in cells :
+        for user in users :
+            #users 25%#
+            find_user_cell_25_temp = find_cells_clean[(find_cells_clean.cell_split == cell ) & (find_cells_clean.users == user)]
+            
+            list_values = find_user_cell_25_temp['time_total_cell'].to_list()
+            n_ispitanika = len(list_values)
+            najbrzih_25_temp = n_ispitanika/100*25
+            najbrzih_25 = int(najbrzih_25_temp)
+
+            find_user_cell_25_temp = find_user_cell_25_temp.nsmallest(najbrzih_25, ['time_total_cell'])
+
+            find_user_cell_25_temp = find_user_cell_25_temp.rename(columns={'time_total_cell': 'time_total_users_25'})
+            find_user_cell_25_temp = find_user_cell_25_temp.astype({'time_total_users_25': 'int32'})
+            
+            list_find_cells_users_25.append(find_user_cell_25_temp)
+        
+
+            #users 50%#
+            find_user_cell_50_temp = find_cells_clean[(find_cells_clean.cell_split == cell ) & (find_cells_clean.users == user)]
+            
+            list_values = find_user_cell_50_temp['time_total_cell'].to_list()
+            n_ispitanika = len(list_values)
+            najbrzih_50_temp = n_ispitanika/100*50
+            najbrzih_50 = int(najbrzih_50_temp)
+
+            find_user_cell_50_temp = find_user_cell_50_temp.nsmallest(najbrzih_50, ['time_total_cell'])
+
+            find_user_cell_50_temp = find_user_cell_50_temp.rename(columns={'time_total_cell': 'time_total_users_50'})
+            find_user_cell_50_temp = find_user_cell_50_temp.astype({'time_total_users_50': 'int32'})
+            
+            list_find_cells_users_50.append(find_user_cell_50_temp)
+
+    find_user_cell_25 = pd.concat(list_find_cells_users_25) 
+    find_user_cell_50 = pd.concat(list_find_cells_users_50) 
+
+    #SPAJANJE BAZA#
+
+    final_find = find_TIME_purchase.merge(
+                 find_cells_clean[['USER ID', 'time_total_cell']], on='USER ID', how='left').merge(
+                 find_cells_25[['USER ID', 'time_total_cell_25']], on='USER ID', how='left').merge(
+                 find_cells_50[['USER ID', 'time_total_cell_50']], on='USER ID', how='left').merge(
+                 find_user_cell_25[['USER ID', 'time_total_users_25']], on='USER ID', how='left').merge(
+                 find_user_cell_50[['USER ID', 'time_total_users_50']], on='USER ID', how='left')
+
+    #spajanje sa svim ispitanicima
+
+    respondents_unique_temp = find_merge[['USER ID', 'Vrid']]
+    respondents_unique = respondents_unique_temp.drop_duplicates()
+
+    final_find_all_temp = respondents_unique.merge(final_find, on='USER ID', how='left')
+    final_find_all_temp = final_find_all_temp.rename(columns={'Vrid_x': 'Vrid'})
+    final_find_all_temp = final_find_all_temp.drop('Vrid_y', 1)
+
+    cols1 = ['SKU','CLIENT','QUANTITY']
+    final_find_all = final_find_all_temp
+    for col in cols1:
+        final_find_all[col] = final_find_all_temp[col].replace(np.nan,'none')
+
+    #excel export
+
+    with pd.ExcelWriter("final.xlsx") as writer:
+        final_find_all.to_excel(writer, sheet_name='sheet1', index=False)
     
-    if originalSurvey is None:
+    with open('final.xlsx', mode = "rb") as f:
+        st.download_button('Findability Data', f, file_name='final.xlsx')
+
+
+with dataset:
+    allFilenames = st.file_uploader('Upload Databases from Virtual Shelf Platform:', type=None, accept_multiple_files=True, key=None, help=None, on_change=None, args=None, kwargs=None,disabled=False)
+
+    valid_id_import = st.file_uploader('Upload Database with Final IDs:', type=None, accept_multiple_files=False, key=None, help=None, on_change=None, args=None, kwargs=None, disabled=False)
+
+    tested_product  = st.text_input('Insert tested product for example tested LIQUID FENCE DEER & RABBIT REPELLENT')
+
+    if len(allFilenames)==0 or valid_id_import is None:
         st.error("Please upload the files!")
+    elif tested_product == '':
+        st.error("Please insert tested product")
     else:
-        with open('temp.sav', "wb") as buffer:
-            shutil.copyfileobj(originalSurvey, buffer)
-
-
-    #pokupi klikove iz SPSS baze
-        os.chdir('C:\\Users\\jelisaveta.m\\Desktop\\Decipher dashboards')
-        originalSurvey, meta = pyreadstat.read_sav(os.getcwd() + '\\Raw data\\ETL\\Survey\\220613.sav', user_missing=False)
-        
-        clickVariables = [col for col in originalSurvey.columns if re.search('AllDataBackupNoRemoved', col) ]
-        
-        clickVariablesSL = {'AllDataBackupNoRemoved1' : 2, 'AllDataBackupNoRemoved2' : 2}
-        
-        """
-        click/zone detection function
-        """    
-        def clickFunction (cell, sl, xAxis, yAxis, comment, time):
-            inZone = [] 
-            comments = []
-            times = []
-            try:
-                def inside (dots, z, comment, time):
-                    dot = dots
-                    x = dot[0]
-                    y = dot[1]
-                    inside = False;
-                    for i, j in zip((0,1,2,3), (3,0,1,2)):
-                        xi = z[i]['x'] / 10
-                        yi = z[i]['y'] / 10
-                        xj = z[j]['x'] / 10
-                        yj = z[j]['y'] / 10            
-                        res = yj - yi
-                        if res == 0:
-                            res = 0.00000000000000000000000000000000000000001
-                    
-                        intersect = ((yi > y) != (yj > y)) & (x < (xj - xi) * (y - yi) / (res) + xi)
-                        if intersect:
-                            inside = not inside
-                    return inside
-                
-                zones = dataSL[str(cell).split('.')[0]][str(sl)]['p']
-                
-                if len(zones) == 0:
-                    raise Exception("Zones are not defined. Check SDT or send data to AWS")
-                else:
-                    for idx, z in enumerate(zones):
-                        if inside ([float(xAxis), float(yAxis)], z, comment, float(time)):
-                            inZone.append(1)
-                            comments.append(comment)
-                            times.append(time)
-                        else:
-                            inZone.append(0)
-                            comments.append("")
-                            times.append(0)
-            except:
-                inZone.append(0)
-                comments.append("")
-                times.append(0)
-            return ([inZone, comments, times])
-         
-        """
-        extract coordinates and comments from the raw variable
-        """
-        
-        def extractCoord (x, coord):
-            try:
-                if coord == 'x' or 'y':
-                    result = re.findall(str(coord) + ' :([+-]?[0-9]+\.[0-9]+)', str(x))
-                if coord == 'comm':
-                    result = re.findall('explanation :(.*?)\}', str(x)) 
-                if coord == 'time':
-                    result = re.findall('time :(.*?)\}', str(x))
-            except:
-                result = [0]
-            return result
-        
-        
-        """
-        functions END
-        """
-        clickVariablesCell = clickVariables + ['uuid', 'CELL']
-        clickData = originalSurvey[clickVariablesCell]
-        
-        finalRes = pd.DataFrame()
-        for clickVar in clickVariables: 
-            clickData['X_extract'] = clickData[clickVar].apply(lambda x: extractCoord(x, 'x'))
-            clickData['Y_extract'] = clickData[clickVar].apply(lambda x: extractCoord(x, 'y'))
-            clickData['explanation_extract'] = clickData[clickVar].apply(lambda x: extractCoord(x, 'comm'))
-            clickData['time_extract'] = clickData[clickVar].apply(lambda x: extractCoord(x, 'time'))
-        	
-            info = clickData[['uuid', 'CELL']]
-            x_devided = pd.DataFrame(clickData["X_extract"].to_list()).add_prefix('xDevided_').reset_index(drop=True)
-            y_devided = pd.DataFrame(clickData["Y_extract"].to_list()).add_prefix('yDevided_').reset_index(drop=True)
-            comm_devided = pd.DataFrame(clickData["explanation_extract"].to_list()).add_prefix('commDevided_').reset_index(drop=True)
-            time_devided = pd.DataFrame(clickData["time_extract"].to_list()).add_prefix('timeDevided_').reset_index(drop=True)
-        	
-            finalData = pd.concat([info, x_devided, y_devided, comm_devided, time_devided], axis=1)
-            finalData = finalData.fillna(0)
-        	
-            finalDataLong = pd.wide_to_long(finalData, stubnames=['xDevided_','yDevided_','commDevided_','timeDevided_'], i='uuid', j='clickNo').reset_index()
-            finalDataLongVar = finalDataLong[['uuid','CELL','clickNo','xDevided_','yDevided_','commDevided_','timeDevided_']]
-            # finalDataLongVar['xDevided_'].astype(bool)
-            # finalDataLongVar = finalDataLongVar[finalDataLongVar['xDevided_'].astype(bool)] 
-        	
-        	
-        	#LINK FOR ZONES ON AWS - EXAMPLE: https://eyesee-sdt.com/get_info?project=2022031, if we ever need to transfer this from AWS to SDT
-        	#awsZones = 'https://eyesee-sdt.com/get_info?project=' + str(projectNumber)
-            awsStimuliLogics = 'https://eyesee-raw-stimuli-storage.s3-eu-west-1.amazonaws.com/' + str(projectNumber) + '/utils/out.json'
-        	
-            with urllib.request.urlopen(awsStimuliLogics) as url:
-                dataSL = json.loads(url.read().decode())
-        	
-            structure = {}
-            for key, value in dataSL.items():
-                structure[key] = dataSL[key][str(clickVariablesSL[clickVar])]['s'].split('/')[5].split('_')[1].split('.')[0]
-        	
-            
-            ######################### TEST #########################
-            
-            awsZones = 'https://eyesee-sdt.com/get_info?project=' + str(projectNumber)
-            
-            
-            with urllib.request.urlopen(awsZones) as url:
-                dataSL_proba = json.loads(url.read().decode())
-             
-            zoneLabelsCell = {}
-            for key, value in structure.items():  
-                zoneLabelsCell[str(key)] = {}
-                for indx, zone in enumerate(json.loads(dataSL_proba[int(value) - 1]['zones_ck'])['polys']):
-                    zoneLabelsCell[str(key)][indx] = zone['client']
-         
-            allZonesLen = []
-            for x in zoneLabelsCell:
-                allZonesLen.append(len(zoneLabelsCell[x]))
-                
-            finalClickLabels = {}
-            for k, v in zoneLabelsCell[list(structure.keys())[allZonesLen.index(max(allZonesLen))]].items():
-                if v == 'Dummy':
-                    v = zoneLabelsCell[list(structure.keys())[allZonesLen.index(max(allZonesLen)) - 1]][k]
-                finalClickLabels[k] = v
-                
-            binaryClick = finalDataLongVar.apply(lambda row : clickFunction(row['CELL'], clickVariablesSL[clickVar], row['xDevided_'], row['yDevided_'], row['commDevided_'], row['timeDevided_']), axis = 1)
-            finalDataLongVarFin = finalDataLongVar.assign(Result = binaryClick)
-            
-            finalDataLongVarFin[['Clicks','Comments','Times']] = pd.DataFrame(finalDataLongVarFin["Result"].to_list())
-            # resultDevided = pd.DataFrame(finalDataLongVarFin["Result"].to_list()).add_prefix('Type_')
-            # resultDevided['uuid'] = finalDataLongVarFin['uuid']
-            
-            finalDataLongVarFin[list('ClickZone_' + str(x+1) for x in list(pd.DataFrame(finalDataLongVarFin['Clicks'].to_list()).columns))] = pd.DataFrame(finalDataLongVarFin['Clicks'].to_list())
-            # resultDevided_click = pd.DataFrame(resultDevided["Type_0"].to_list())
-            # resultDevided_click.columns = ['ClickZone_' + str(x+1) for x in list(resultDevided_click.columns)]
-            finalDataLongVarFin[list('ClickComment_' + str(x+1) for x in list(pd.DataFrame(finalDataLongVarFin['Comments'].to_list()).columns))] = pd.DataFrame(finalDataLongVarFin['Comments'].to_list())
-            
-            # resultDevided_zones = pd.DataFrame(resultDevided["Type_1"].to_list())
-            # resultDevided_zones.columns = ['ClickComment_' + str(x+1) for x in list(resultDevided_zones.columns)]
-            finalDataLongVarFin[list('ClickTime_' + str(x+1) for x in list(pd.DataFrame(finalDataLongVarFin['Times'].to_list()).columns))] = pd.DataFrame(finalDataLongVarFin['Times'].to_list())
-            
-            # resultDevided_times = pd.DataFrame(resultDevided["Type_2"].to_list())
-            # resultDevided_times.columns = ['ClickTime_' + str(x+1) for x in list(resultDevided_times.columns)]
-            finalDataLongVarFinal = finalDataLongVarFin
-            
-        	
-        	
-            # finalDataLongVarFinal = pd.concat([finalDataLongVarFin, resultDevided_click, resultDevided_zones, resultDevided_times], axis=1)   
-        	
-            clickOnly = [col for col in finalDataLongVarFin if col.startswith('ClickZone')]
-            clicksFinal = finalDataLongVarFin.groupby('uuid')[clickOnly].max().reset_index(drop=False)
-            clicksFinal = clicksFinal.fillna(0)
-            
-            commentOnly = [col for col in finalDataLongVarFinal if col.startswith('ClickComment')]
-            commentsFinal = finalDataLongVarFin.groupby('uuid')[commentOnly].sum().reset_index(drop=False)
-            commentsFinal = commentsFinal.replace(0, "")
-            
-            timeOnly = [col for col in finalDataLongVarFinal if col.startswith('ClickTime')]
-            timeFinal = finalDataLongVarFin.groupby('uuid')[timeOnly].sum().reset_index(drop=False)
-            timeFinal = timeFinal.replace(0, "")
-            
-            allAggDatabases = [clicksFinal, commentsFinal, timeFinal]   
-            finalDataLongVarFinal = reduce(lambda  left,right: pd.merge(left,right,on=['uuid'], how='outer'), allAggDatabases)
-            
-            
-            if finalRes.empty:
-                finalRes = originalSurvey.merge(finalDataLongVarFinal,on='uuid')
-            else:
-                finalRes = finalRes.merge(finalDataLongVarFinal,on='uuid')
-	
-	
-	finalClickDatabase = clickData.merge(finalRes,on='uuid')
-
-	finalDataLongVarFinal.to_csv('C:/Users/jelisaveta.m/Desktop/' + str(projectNumber) + 'proba_jellu_final.csv')
+        get_findability_data(allFilenames, valid_id_import, tested_product)
