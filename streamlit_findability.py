@@ -425,11 +425,11 @@ with dataset:
                 
         new_labels = new_labels + click_labels
         meta.variable_measure.update(click_measure)
+       
         
-        with open("C:\\Users\\jelisaveta.m\\Desktop\\Decipher dashboards\\Outputs\\ETL\\Survey\\test_dapresy_final.sav", "w") as f:
-            #pyreadstat.write_sav(finalAllMerged, f)
-            #pyreadstat.write_sav(finalAllMerged, f,  variable_value_labels = new_dict, column_labels = new_labels, variable_measure = meta.variable_measure)
-            st.download_button('Findability Data', f, file_name='progress.sav')
-        
-	
+	def get_table_download_link(df):
+            csv = df.to_csv(index=False)
+            b64 = base64.b64encode(csv.encode()).decode()  # some strings <-> bytes conversions necessary here
+            href = f'<a href="data:file/csv;base64,{b64}">Download csv file</a>'
+	st.markdown(get_table_download_link(finalAllMerged), unsafe_allow_html=True)
         #pyreadstat.write_sav(finalAllMerged, 'C:\\Users\\jelisaveta.m\\Desktop\\Decipher dashboards\\Outputs\\ETL\\Survey\\test_dapresy_final_1.sav',  variable_value_labels = new_dict, column_labels = new_labels, variable_measure = meta.variable_measure)
